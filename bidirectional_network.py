@@ -32,7 +32,7 @@ def bidirectional_network(feature_sizes: list, input_feature_size: int, output_f
     def bidirectional_forward(input_image_batched, input_label_batched):
         # Forward image classifier.
         image_classifier_output = forward_layers_of_nodes(input_image_batched)
-        # TODO: Function to forward the digit label and get the predicted image pixel.
+        # TODO: Function to forward the digit label and get the predicted image pixel
         # TODO: Function to get the loss from image classifier and generative image
-        # TODO: Get the activation value of both bidirectional passes.
+        # TODO: Get the activation value of both bidirectional passes
 
