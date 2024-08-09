@@ -18,11 +18,11 @@ def nodes(input_features: int, output_features: int, device: str='cuda'):
     # weight and bias initialization
     weight_and_bias_initialization(weight, bias)
 
-    def node_computation(input_feature: torch.Tensor):
-        return relu(torch.matmul(input_feature, weight.t()) + bias)
-    
+    def node_computation(input_feature: torch.Tensor, reverse_computation: bool):
+        return relu(torch.matmul((input_feature + bias), weight)) if reverse_computation else relu(torch.matmul(input_feature, weight.t()) + bias)
+
     return node_computation, weight, bias
 
-input_data_test = torch.randn(10, device='cuda')
-node, w, b = nodes(10, 10)
-print(node(input_data_test))
+# input_data_test = torch.randn(10, device='cuda')
+# node, w, b = nodes(10, 10)
+# print(node(input_data_test))

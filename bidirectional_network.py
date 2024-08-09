@@ -1,5 +1,9 @@
 import torch
 from layer import nodes
+from torch.nn import CrossEntropyLoss, MSELoss
+
+image_classifier_loss_function = CrossEntropyLoss()
+generative_loss_function = MSELoss()
 
 def bidirectional_network(feature_sizes: list, input_feature_size: int, output_feature: int, device: str):
     layers = []
@@ -11,9 +15,9 @@ def bidirectional_network(feature_sizes: list, input_feature_size: int, output_f
 
     number_of_layers = len(feature_sizes) - 1
     for each in range(number_of_layers):
-        input_feature = feature_sizes[each]
-        output_feature = feature_sizes[each+1]
-        inner_layer_of_nodes, inner_weight, inner_bias = nodes(input_feature, output_feature, device)
+        in_feature = feature_sizes[each]
+        out_feature = feature_sizes[each+1]
+        inner_layer_of_nodes, inner_weight, inner_bias = nodes(in_feature, out_feature, device)
         layers.append(inner_layer_of_nodes)
         parameters.extend([inner_weight, inner_bias])
 
@@ -21,18 +25,29 @@ def bidirectional_network(feature_sizes: list, input_feature_size: int, output_f
     layers.append(last_layer_of_nodes)
     parameters.extend([last_layer_weights, last_layer_bias])
 
-    def forward_layers_of_nodes(input_batch: torch.Tensor):
-        previous_layer_output = input_batch
-        for layer in layers:
-            previous_layer_output = layer(previous_layer_output)
+    def forward_layers_of_nodes(input_data: torch.Tensor, reverse_forward: bool):
+        network_layers = layers[::-1] if reverse_forward else layers
 
-        return last_layer_of_nodes(previous_layer_output)
+        previous_layer_output = input_data
+        neurons_activation = []
+        for layer in network_layers:
+            previous_layer_output = layer(previous_layer_output, reverse_forward)
+            neurons_activation.append(previous_layer_output)
 
-    # pass both image data and corresponding label
-    def bidirectional_forward(input_image_batched, input_label_batched):
-        # Forward image classifier.
-        image_classifier_output = forward_layers_of_nodes(input_image_batched)
-        # TODO: Function to forward the digit label and get the predicted image pixel
-        # TODO: Function to get the loss from image classifier and generative image
-        # TODO: Get the activation value of both bidirectional passes
+        return previous_layer_output, neurons_activation
+    
+    def bidirectional_forward(batched_image_data, batched_label_data):
+        first_forward_pass_output, first_forward_pass_activations = forward_layers_of_nodes(input_data=batched_image_data, reverse_forward=False)
+        second_forward_pass_output, second_forward_pass_activations = forward_layers_of_nodes(input_data=batched_label_data, reverse_forward=True)
 
+        return first_forward_pass_output, first_forward_pass_activations, second_forward_pass_output, second_forward_pass_activations
+
+    # TODO: Create a function that computes the distance of the two tensor. Return same shape with a value of the distance of two tensor correspond to it's position
+    # TODO: Update the weights on how based on the distance of the tensor.
+
+    return bidirectional_forward
+
+x = torch.randn(1, 10, device="cuda")
+y = torch.randn(1, 5, device="cuda")
+network = bidirectional_network([10, 10, 10], 10, 5, "cuda")
+print(network(x, y))

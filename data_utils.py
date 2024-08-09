@@ -1,6 +1,4 @@
 import gzip
-import torch
-import random
 import pickle
 
 def load_data_to_memory(file_name: str):
