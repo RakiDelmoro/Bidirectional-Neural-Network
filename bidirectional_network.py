@@ -1,53 +1,52 @@
 import torch
-from layer import nodes
-from torch.nn import CrossEntropyLoss, MSELoss
+import math
 
-image_classifier_loss_function = CrossEntropyLoss()
-generative_loss_function = MSELoss()
+def nodes(weight: torch.Tensor):
+    # weight initialization
+    torch.nn.init.kaiming_uniform_(weight, a=math.sqrt(5))
 
-def bidirectional_network(feature_sizes: list, input_feature_size: int, output_feature: int, device: str):
-    layers = []
-    parameters = []
+    def node_computation(input_feature: torch.Tensor):
+        return torch.matmul(input_feature, weight)
 
-    first_layer_of_nodes, first_layer_weights, first_layer_bias = nodes(input_feature_size, feature_sizes[0], device)
-    layers.append(first_layer_of_nodes)
-    parameters.extend([first_layer_weights, first_layer_bias])
+    return node_computation
 
-    number_of_layers = len(feature_sizes) - 1
-    for each in range(number_of_layers):
-        in_feature = feature_sizes[each]
+def network(feature_sizes: list, device: str):
+    # Intialize network layers and parameters
+    forward_pass_layers = []
+    backward_pass_layers = []
+    network_weights = []
+
+    for each in range(len(feature_sizes)-1):
+        in_feature =  feature_sizes[each]
         out_feature = feature_sizes[each+1]
-        inner_layer_of_nodes, inner_weight, inner_bias = nodes(in_feature, out_feature, device)
-        layers.append(inner_layer_of_nodes)
-        parameters.extend([inner_weight, inner_bias])
+        weights = torch.empty((in_feature, out_feature), device=device)
+        forward_layer = nodes(weights)
+        backward_layer = nodes(weights.t()) # Flip the weights
+        
+        network_weights.append(weights)
+        forward_pass_layers.append(forward_layer)
+        backward_pass_layers.insert(0, backward_layer)
 
-    last_layer_of_nodes, last_layer_weights, last_layer_bias = nodes(feature_sizes[-1], output_feature, device)
-    layers.append(last_layer_of_nodes)
-    parameters.extend([last_layer_weights, last_layer_bias])
+    def forward_in_bidirectional(image_data, label_data):
+        forward_pass_outputs = []
+        backward_pass_outputs = []
 
-    def forward_layers_of_nodes(input_data: torch.Tensor, reverse_forward: bool):
-        network_layers = layers[::-1] if reverse_forward else layers
+        input_for_forward_pass = image_data
+        input_for_backward_pass = label_data
+        for each_layer in range(len(feature_sizes)-1):
+            input_for_forward_pass = forward_pass_layers[each_layer](input_for_forward_pass)
+            input_for_backward_pass = backward_pass_layers[each_layer](input_for_backward_pass)
+            
+            forward_pass_outputs.append(input_for_forward_pass)
+            backward_pass_outputs.append(input_for_backward_pass)
 
-        previous_layer_output = input_data
-        neurons_activation = []
-        for layer in network_layers:
-            previous_layer_output = layer(previous_layer_output, reverse_forward)
-            neurons_activation.append(previous_layer_output)
+        return torch.concat(forward_pass_outputs, dim=-1), torch.concat(backward_pass_outputs, dim=-1)
 
-        return previous_layer_output, neurons_activation
-    
-    def bidirectional_forward(batched_image_data, batched_label_data):
-        first_forward_pass_output, first_forward_pass_activations = forward_layers_of_nodes(input_data=batched_image_data, reverse_forward=False)
-        second_forward_pass_output, second_forward_pass_activations = forward_layers_of_nodes(input_data=batched_label_data, reverse_forward=True)
+    return forward_in_bidirectional
 
-        return first_forward_pass_output, first_forward_pass_activations, second_forward_pass_output, second_forward_pass_activations
+x = torch.randn(10, device="cuda")
+y = torch.randn(5, device="cuda")
+model = network(feature_sizes=[10, 20, 20, 5], device="cuda")
+forward, backward = model(x, y)
+print(forward.shape, backward.shape)
 
-    # TODO: Create a function that computes the distance of the two tensor. Return same shape with a value of the distance of two tensor correspond to it's position
-    # TODO: Update the weights on how based on the distance of the tensor.
-
-    return bidirectional_forward
-
-x = torch.randn(1, 10, device="cuda")
-y = torch.randn(1, 5, device="cuda")
-network = bidirectional_network([10, 10, 10], 10, 5, "cuda")
-print(network(x, y))
