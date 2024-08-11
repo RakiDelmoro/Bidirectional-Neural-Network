@@ -59,8 +59,12 @@ def model_runner(model, number_of_epochs):
         return feature_nodes_loss
 
     def training(image_data, label_data):
-        forward_output, backward_output = model(image_data, label_data)
-        feature_loss_per_node = nodes_discriminator(forward_output, backward_output)
+        for epoch in range(number_of_epochs):
+            forward_output, backward_output = model(image_data, label_data)
+            feature_loss_per_node = nodes_discriminator(forward_output, backward_output)
+            # TODO: Define the training objective of our model
+            # TODO: Write a function about the training objective
+            # TODO: Update the weights of the model based on training objective
 
     return training
 
