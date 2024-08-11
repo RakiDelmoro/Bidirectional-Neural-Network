@@ -65,7 +65,6 @@ def model_runner(model, number_of_epochs):
             # TODO: Define the training objective of our model
             # TODO: Write a function about the training objective
             # TODO: Update the weights of the model based on training objective
-            
 
     return training
 
