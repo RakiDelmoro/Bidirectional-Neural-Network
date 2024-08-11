@@ -65,11 +65,12 @@ def model_runner(model, number_of_epochs):
             # TODO: Define the training objective of our model
             # TODO: Write a function about the training objective
             # TODO: Update the weights of the model based on training objective
+            
 
     return training
 
 x = torch.randn(10, device="cuda")
 y = torch.randn(5, device="cuda")
 model, model_parameters = network(feature_sizes=[10, 20, 20, 5], device="cuda")
-forward_outputs, backward_outputs = model(x, y)
-print(forward_outputs[-1], backward_outputs[-1])
+training_model = model_runner(model, 100)
+training_model(x, y)

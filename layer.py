@@ -6,23 +6,17 @@ from torch.nn import Parameter
 from torch.nn.functional import relu
 
 def weight_and_bias_initialization(weight, bias):
-    nn.init.kaiming_uniform_(weight, a=math.sqrt(5))
     fan_in, _ = nn.init._calculate_fan_in_and_fan_out(weight)
     bound = 1 / math.sqrt(fan_in) if fan_in > 0 else 0
-    return nn.init.uniform_(bias, -bound, bound)
+    return nn.init.kaiming_uniform_(weight, a=math.sqrt(5)),  nn.init.uniform_(bias, -bound, bound)
 
-def nodes(input_features: int, output_features: int, device: str='cuda'):
-    weight = Parameter(empty((output_features, input_features), device=device))
-    bias = Parameter(empty(output_features, device=device))
+def linear_layer(input_feature: int, output_feature: int, device: str):
+    weight = Parameter(torch.empty((output_feature, input_feature), device=device))
+    # bias = Parameter(torch.empty(output_feature, device=device))
+    torch.nn.init.kaiming_uniform_(weight, a=math.sqrt(5))
+    # weight_and_bias_initialization(weight, bias)
 
-    # weight and bias initialization
-    weight_and_bias_initialization(weight, bias)
+    def layer_computation(x: torch.Tensor):
+        return relu(torch.matmul(x, weight.t()))
 
-    def node_computation(input_feature: torch.Tensor, reverse_computation: bool):
-        return relu(torch.matmul((input_feature + bias), weight)) if reverse_computation else relu(torch.matmul(input_feature, weight.t()) + bias)
-
-    return node_computation, weight, bias
-
-# input_data_test = torch.randn(10, device='cuda')
-# node, w, b = nodes(10, 10)
-# print(node(input_data_test))
+    return layer_computation, weight
