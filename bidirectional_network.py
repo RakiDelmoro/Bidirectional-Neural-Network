@@ -14,22 +14,31 @@ def network(feature_sizes: list, device: str):
 
         return node_computation
 
-    # Intialize network parameters
-    weights = [Parameter(torch.empty((feature_sizes[size], feature_sizes[size+1]), device=device)) for size in range(len(feature_sizes)-1)]
-    biases = [Parameter(torch.empty(size, device=device)) for size in feature_sizes]
-    network_parameters = [[weights[each], biases[each+1]] for each in range(len(feature_sizes)-1)]
+    forward_layers = []
+    backward_layers = []
+    model_parameters = []
 
-    forward_pass_layers = []
-    backward_pass_layers = []
+    for each in range(len(feature_sizes)):
+        # Weights for each node
+        weights = Parameter(torch.empty((feature_sizes[each], 1), device=device))
+        # Bias for each node 
+        bias = Parameter(torch.empty(1, device=device))
+        layer_parameters = []
+        forward_layer_nodes = []
+        backward_layer_nodes = []
 
-    for each in range(len(feature_sizes)-1):
-        forward_layer = nodes(weights[each], biases[each+1])
-        backward_layer = nodes(weights[each].t(), biases[each]) # Flip the weights
+        node = nodes(weights, bias)
+        for _ in range(feature_sizes[each]):
+            forward_layer_nodes.append(node)
+            backward_layer_nodes.append(node)
 
-        forward_pass_layers.append(forward_layer)
-        backward_pass_layers.insert(0, backward_layer)
+        forward_layers.append(forward_layer_nodes)
+        backward_layers.insert(0, backward_layer_nodes)
+        model_parameters.append(layer_parameters)
 
     def forward_in_bidirectional(image_data, label_data):
+        forward_layers = forward_layers
+        backward_layers = forward_layers[::-1]
         forward_pass_outputs = []
         backward_pass_outputs = []
 
@@ -38,16 +47,26 @@ def network(feature_sizes: list, device: str):
         forward_pass_outputs.append(input_for_forward_pass)
         backward_pass_outputs.insert(0, input_for_backward_pass)
 
-        for each_layer in range(len(feature_sizes)-1):
-            input_for_forward_pass = forward_pass_layers[each_layer](input_for_forward_pass)
-            input_for_backward_pass = backward_pass_layers[each_layer](input_for_backward_pass)
-
+        for each_layer in range(len(forward_layers)):
+            # Forward pass
+            forward_output_nodes = []
+            for forward_pass in forward_layers[each_layer]:
+                forward_output_node = forward_pass(input_for_forward_pass)
+                forward_output_nodes.append(forward_output_node)
+            input_for_forward_pass = torch.stack(forward_output_nodes, dim=0)
             forward_pass_outputs.append(input_for_forward_pass)
+
+            # Backward pass
+            backward_output_nodes = []
+            for backward_pass in forward_layers[each_layer]:
+                backward_output_node = backward_pass(input_for_backward_pass)
+                backward_output_nodes.append(backward_output_node)
+            input_for_backward_pass = torch.stack(backward_output_nodes, dim=0)
             backward_pass_outputs.insert(0, input_for_backward_pass)
 
         return forward_pass_outputs, backward_pass_outputs
 
-    return forward_in_bidirectional, network_parameters
+    return forward_in_bidirectional
 
 def model_runner(model, number_of_epochs, model_parameters, lr):
 
@@ -62,19 +81,15 @@ def model_runner(model, number_of_epochs, model_parameters, lr):
         return feature_nodes_loss
 
     def backpropagate_per_node(loss_per_nodes, model_parameters, learning_rate):
-        each_loss_per_node = []
         for feature_layer_index, each_feature_nodes in enumerate(loss_per_nodes):
-            for each_node_loss in each_feature_nodes:
-                layer_parameters = torch.optim.AdamW(model_parameters[feature_layer_index], learning_rate)
-                # backpropagation per node
-                layer_parameters.zero_grad()
-                each_node_loss.backward() # We get an error: 
-                                            #Trying to backward through the graph a second time (or directly access saved tensors after they have already been freed). Saved intermediate values of the graph are freed when you call .backward() or autograd.grad(). Specify retain_graph=True if you need to backward through the graph a second time or if you need to access saved tensors after calling backward.
-                # TODO: Find a way to backpropagate each node.
-                layer_parameters.step()
-                each_loss_per_node.append(each_node_loss)
+            weights_to_update_per_node = [[Parameter(model_parameters[feature_layer_index][0]), Parameter(model_parameters[feature_layer_index][1])] for _ in range(each_feature_nodes.shape[0])]
+            for node_loss_index, each_node_loss in enumerate(each_feature_nodes):
+                layer_optimizer = torch.optim.AdamW(weights_to_update_per_node[node_loss_index], learning_rate)
+                layer_optimizer.zero_grad()
+                each_node_loss.backward() 
+                layer_optimizer.step()
 
-        return each_loss_per_node
+        return weights_to_update_per_node
 
     def training(image_data, label_data):
         for epoch in range(number_of_epochs):
@@ -89,6 +104,5 @@ def model_runner(model, number_of_epochs, model_parameters, lr):
 
 x = torch.randn(10, device="cuda")
 y = torch.randn(5, device="cuda")
-model, model_parameters = network(feature_sizes=[10, 20, 20, 5], device="cuda")
-training_model = model_runner(model, 100, model_parameters, 0.001)
-training_model(x, y)
+model = network(feature_sizes=[10, 20, 20, 5], device="cuda")
+print(model(x, y))
