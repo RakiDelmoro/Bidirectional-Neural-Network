@@ -1,28 +1,101 @@
-def one_neural_network(input_data=2, desired_output=10, lr=0.01):
-    # Initialize weights and bias
-    weight = 0.1
-    bias = 0.1
+import torch
+from torch.nn.functional import linear
+
+def micro_nets():
+    # Input Data
+    input_x = torch.tensor([0, 0], dtype=torch.float32, device="cuda")
+    expected_y = torch.tensor([0, 1], dtype=torch.float32, device="cuda")
+
+    # Parameters of input to hidden nodes
+    input_to_hidden_weight_1 = torch.tensor([0.345], dtype=torch.float32, device="cuda")
+    input_to_hidden_weight_2 = torch.tensor([1.839], dtype=torch.float32, device="cuda")
+    input_to_hidden_weight_3 = torch.tensor([1.152], dtype=torch.float32, device="cuda")
+    input_to_hidden_weight_4 = torch.tensor([0.946], dtype=torch.float32, device="cuda")
+    hidden_bias = torch.tensor([[0.584], [0.325]], dtype=torch.float32, device="cuda")
+
+    # Forward pass input to hidden nodes
+    hidden_node_1 = (input_x[0]*input_to_hidden_weight_1) + (input_x[1]*input_to_hidden_weight_3)
+    hidden_node_2 = (input_x[0]*input_to_hidden_weight_2) + (input_x[1]*input_to_hidden_weight_4)
+    hidden_nodes = (hidden_node_1 + hidden_node_2) + hidden_bias
+
+    # Parameters of hidden nodes to output nodes
+    hidden_to_output_weight_5 = torch.tensor([0.873], dtype=torch.float32, device="cuda")
+    hidden_to_output_weight_6 = torch.tensor([0.645], dtype=torch.float32, device="cuda")
+    hidden_to_output_weight_7 = torch.tensor([1.053], dtype=torch.float32, device="cuda")
+    hidden_to_output_weight_8 = torch.tensor([1.079], dtype=torch.float32, device="cuda")
+    output_bias = torch.tensor([[1.064], [0.857]], dtype=torch.float32, device="cuda")
+
+    # Forward pass hidden nodes to output nodes
+    output_node_3 = (hidden_nodes[0]*hidden_to_output_weight_5) + (hidden_nodes[1]*hidden_to_output_weight_7)
+    output_node_4 = (hidden_nodes[0]*hidden_to_output_weight_6) + (hidden_nodes[1]*hidden_to_output_weight_8)
+    output_nodes = (output_node_3 + output_node_4) + output_bias
+
+    # Loss of the network
+    loss = sum([(output_nodes_i - expected_y_i)**2 for output_nodes_i, expected_y_i in zip(output_nodes, expected_y)])
+   
+    output_nodes_gradients = [2 * (output_nodes_i - expected_y_i) for output_nodes_i, expected_y_i in zip(output_nodes, expected_y)]
+    # Gradient for each output nodes
+    output_node_1_actual_data_and_gradient = (output_nodes[0], output_nodes_gradients[0])
+    output_node_2_actual_data_and_gradient = (output_nodes[1], output_nodes_gradients[1])
+
+    # Get the gradient of each parameter in output nodes
+    weight_5_gradient = output_node_1_actual_data_and_gradient[1] * output_node_1_actual_data_and_gradient[0]
+    weight_6_gradient = output_node_2_actual_data_and_gradient[1] * output_node_2_actual_data_and_gradient[0]
+    weight_7_gradient = output_node_1_actual_data_and_gradient[1] * output_node_1_actual_data_and_gradient[0]
+    weight_8_gradient = output_node_2_actual_data_and_gradient[1] * output_node_2_actual_data_and_gradient[0]
+
+    pass
+    
+
+input_data = torch.tensor([[5], [15]], dtype=torch.float32, device="cuda")
+expected = torch.tensor([[5]], dtype=torch.float32, device="cuda")
+learning_rate = 0.001
+    
+def two_input_one_neuron(input_data, expected, lr):
+    # W1 and W2
+    weights = torch.tensor([[0.9], [0.2]], dtype=torch.float32, device="cuda")
+    bias = torch.tensor([[1.0]], dtype=torch.float32, device="cuda")
 
     while True:
-        node1 = (input_data*weight) + bias
-        # loss calculation to match the desired output we squared so that we can't have a negative number.
-        loss = (node1 - desired_output)**2
-        
-        print(f"Neuron: {node1} Weight: {weight} Bias: {bias} Loss: {loss}")
+        weighted_sum = torch.sum(torch.tensor([[input_i * w_i for input_i, w_i in zip(input_data, weights)]]))
+        neuron = weighted_sum + bias
+        neuron_loss = (neuron - expected)**2
 
-        if int(node1) == desired_output:
-            print(node1)
-            break
+        weight_1_grad = input_data[0] * neuron_loss
+        weight_2_grad = input_data[1] * neuron_loss
+        bias_grad = neuron_loss
 
-        # How much steep were need to toward the local minima
-        derivative = 2*(node1 - desired_output)
+        new_weight1 = weights[0] - lr * weight_1_grad
+        new_weight2 = weights[1] - lr * weight_2_grad
+        new_bias = bias - lr * bias_grad
 
-        # We step based on the derivative
-        gradient_weight = node1*derivative
-        gradient_bias = bias*derivative
+        weights[0] = new_weight1
+        weights[1] = new_weight2
+        bias = new_bias
 
-        # weight and bias update
-        weight += weight - lr * gradient_weight
-        bias += bias - lr * gradient_bias
+        yield print(f"Loss: {neuron_loss.item()} Neuron: {neuron}")
 
-one_neural_network()
+def pytorch_two_input_one_neuron(input_data, expected, lr):
+    weights = torch.tensor([[0.9], [0.2]], dtype=torch.float32, device="cuda", requires_grad=True)
+    bias = torch.tensor([[1.0]], dtype=torch.float32, device="cuda", requires_grad=True)
+
+    parameters = [weights, bias]
+
+    loss_func = torch.nn.MSELoss()
+    optimizer = torch.optim.SGD(parameters, lr=lr)
+
+    while True:
+        neuron = linear(input_data.t(), weights.t(), bias)
+        neuron_loss = loss_func(neuron, expected)
+        optimizer.zero_grad()
+        neuron_loss.backward()
+        optimizer.step()
+
+        yield f"Loss: {neuron_loss.item()} Neuron: {neuron}"
+
+
+for epoch in range(10):
+    for py_result, custom_result in zip(pytorch_two_input_one_neuron(input_data, expected, learning_rate), two_input_one_neuron(input_data, expected, learning_rate)):
+        print(py_result)
+        print(custom_result)
+
