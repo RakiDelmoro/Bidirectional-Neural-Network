@@ -106,3 +106,4 @@ for epoch in range(1, 10, 1):
         print(f"Epoch: {epoch}")
         print(py_result)
         print(custom_result)
+        epoch += 1
