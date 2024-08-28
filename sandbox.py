@@ -60,17 +60,19 @@ def two_input_one_neuron(input_data, expected, lr):
         neuron = weighted_sum + bias
         neuron_loss = (neuron - expected)**2
 
-
+        # Equavalent to optimizer.zero_grad() -> start with zero gradient
         weight_1_grad = 0
         weight_2_grad = 0
         bias_grad = 0
         neuron_grad = 0
 
+        # Equavalent to loss.backward -> calculate local gradient for each parameter
         neuron_grad += 2 * (neuron - expected)
         weight_1_grad += input_data[0][0] * neuron_grad
         weight_2_grad += input_data[0][1] * neuron_grad
         bias_grad += neuron_grad
 
+        # Equavalent to optimizer.step() -> update the parameters 
         new_weight1 = weights[0] - lr * weight_1_grad
         new_weight2 = weights[1] - lr * weight_2_grad
         new_bias = bias - lr * bias_grad
