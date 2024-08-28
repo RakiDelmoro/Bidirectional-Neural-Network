@@ -45,9 +45,8 @@ def micro_nets():
     weight_8_gradient = output_node_2_actual_data_and_gradient[1] * output_node_2_actual_data_and_gradient[0]
 
     pass
-    
 
-input_data = torch.tensor([[5], [15]], dtype=torch.float32, device="cuda")
+input_data = torch.tensor([[5, 15]], dtype=torch.float32, device="cuda")
 expected = torch.tensor([[5]], dtype=torch.float32, device="cuda")
 learning_rate = 0.001
     
@@ -57,13 +56,20 @@ def two_input_one_neuron(input_data, expected, lr):
     bias = torch.tensor([[1.0]], dtype=torch.float32, device="cuda")
 
     while True:
-        weighted_sum = torch.sum(torch.tensor([[input_i * w_i for input_i, w_i in zip(input_data, weights)]]))
+        weighted_sum = torch.sum(torch.tensor([input_i * w_i for input_feature in input_data for input_i, w_i in zip(input_feature, weights)]))
         neuron = weighted_sum + bias
         neuron_loss = (neuron - expected)**2
 
-        weight_1_grad = input_data[0] * neuron_loss
-        weight_2_grad = input_data[1] * neuron_loss
-        bias_grad = neuron_loss
+
+        weight_1_grad = 0
+        weight_2_grad = 0
+        bias_grad = 0
+        neuron_grad = 0
+
+        neuron_grad += 2 * (neuron - expected)
+        weight_1_grad += input_data[0][0] * neuron_grad
+        weight_2_grad += input_data[0][1] * neuron_grad
+        bias_grad += neuron_grad
 
         new_weight1 = weights[0] - lr * weight_1_grad
         new_weight2 = weights[1] - lr * weight_2_grad
@@ -73,7 +79,7 @@ def two_input_one_neuron(input_data, expected, lr):
         weights[1] = new_weight2
         bias = new_bias
 
-        yield print(f"Loss: {neuron_loss.item()} Neuron: {neuron}")
+        yield f"Loss: {neuron_loss.item()} Neuron activation: {neuron}"
 
 def pytorch_two_input_one_neuron(input_data, expected, lr):
     weights = torch.tensor([[0.9], [0.2]], dtype=torch.float32, device="cuda", requires_grad=True)
@@ -85,7 +91,7 @@ def pytorch_two_input_one_neuron(input_data, expected, lr):
     optimizer = torch.optim.SGD(parameters, lr=lr)
 
     while True:
-        neuron = linear(input_data.t(), weights.t(), bias)
+        neuron = linear(input_data, weights.t(), bias)
         neuron_loss = loss_func(neuron, expected)
         optimizer.zero_grad()
         neuron_loss.backward()
@@ -93,9 +99,8 @@ def pytorch_two_input_one_neuron(input_data, expected, lr):
 
         yield f"Loss: {neuron_loss.item()} Neuron: {neuron}"
 
-
-for epoch in range(10):
+for epoch in range(1, 10, 1):
     for py_result, custom_result in zip(pytorch_two_input_one_neuron(input_data, expected, learning_rate), two_input_one_neuron(input_data, expected, learning_rate)):
+        print(f"Epoch: {epoch}")
         print(py_result)
         print(custom_result)
-
