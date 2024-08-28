@@ -99,7 +99,7 @@ def pytorch_two_input_one_neuron(input_data, expected, lr):
         neuron_loss.backward()
         optimizer.step()
 
-        yield f"Loss: {neuron_loss.item()} Neuron: {neuron}"
+        yield f"Loss: {neuron_loss.item()} Neuron activation: {neuron}"
 
 for epoch in range(1, 10, 1):
     for py_result, custom_result in zip(pytorch_two_input_one_neuron(input_data, expected, learning_rate), two_input_one_neuron(input_data, expected, learning_rate)):
