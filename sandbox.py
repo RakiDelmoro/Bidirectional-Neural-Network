@@ -30,7 +30,7 @@ def micro_nets(input_x, expected_y, learning_rate=0.001):
 
         # Loss of the network
         loss = torch.mean(torch.tensor([(output_nodes_i - expected_y_i)**2 for output_nodes_i, expected_y_i in zip(output_nodes[0], expected_y[0])]))
-        output_nodes_gradients = [2 * (output_nodes_i - expected_y_i) for output_nodes_i, expected_y_i in zip(output_nodes[0], expected_y[0])]
+        output_nodes_gradients = [(output_nodes_i - expected_y_i) for output_nodes_i, expected_y_i in zip(output_nodes[0], expected_y[0])]
 
         weight_5_gradient = 0
         weight_6_gradient = 0
@@ -48,19 +48,19 @@ def micro_nets(input_x, expected_y, learning_rate=0.001):
 
         # Get the gradient of each parameter in output nodes
         weight_5_gradient += hidden_nodes[0][0] * output_nodes_gradients[0]
-        weight_6_gradient += hidden_nodes[0][1] * output_nodes_gradients[1]
-        weight_7_gradient += hidden_nodes[0][0] * output_nodes_gradients[0]
+        weight_6_gradient += hidden_nodes[0][0] * output_nodes_gradients[1]
+        weight_7_gradient += hidden_nodes[0][1] * output_nodes_gradients[0]
         weight_8_gradient += hidden_nodes[0][1] * output_nodes_gradients[1]
         output_bias_gradient_1 += output_nodes_gradients[0]
         output_bias_gradient_2 += output_nodes_gradients[1]
 
         hidden_nodes_gradients = [
-            (output_nodes_gradients[0] * input_to_hidden_weight_1) + (output_nodes_gradients[1] * input_to_hidden_weight_3),
-            (output_nodes_gradients[0] * input_to_hidden_weight_2) + (output_nodes_gradients[1] * input_to_hidden_weight_4)
+            (output_nodes_gradients[0] * hidden_to_output_weight_5) + (output_nodes_gradients[1] * hidden_to_output_weight_6),
+            (output_nodes_gradients[0] * hidden_to_output_weight_7) + (output_nodes_gradients[1] * hidden_to_output_weight_8)
         ]
         weight_1_gradient += input_x[0][0] * hidden_nodes_gradients[0]
-        weight_2_gradient += input_x[0][1] * hidden_nodes_gradients[1]
-        weight_3_gradient += input_x[0][0] * hidden_nodes_gradients[0]
+        weight_2_gradient += input_x[0][0] * hidden_nodes_gradients[1]
+        weight_3_gradient += input_x[0][1] * hidden_nodes_gradients[0]
         weight_4_gradient += input_x[0][1] * hidden_nodes_gradients[1]
         hidden_bias_gradient_1 += hidden_nodes_gradients[0]
         hidden_bias_gradient_2 += hidden_nodes_gradients[1]
@@ -108,6 +108,8 @@ def pytorch_micro_nets(input_x, expected_y, lr=0.001):
     while True:
         hidden_nodes = linear(input_x, input_to_hidden_weights, hidden_bias)
         output_nodes = linear(hidden_nodes, hidden_to_output_weights, output_bias)
+        hidden_nodes.retain_grad()
+        output_nodes.retain_grad()
         loss = loss_func(output_nodes, expected_y)
         optimizer.zero_grad()
         loss.backward()
@@ -117,8 +119,8 @@ def pytorch_micro_nets(input_x, expected_y, lr=0.001):
 
 input_data = torch.tensor([[0, 0]], dtype=torch.float32, device="cuda")
 expected = torch.tensor([[0, 1]], dtype=torch.float32, device="cuda")
-# learning_rate = 0.001
-    
+learning_rate = 0.001
+
 def two_input_one_neuron(input_data, expected, lr):
     # W1 and W2
     weights = torch.tensor([[0.9], [0.2]], dtype=torch.float32, device="cuda")
@@ -171,7 +173,7 @@ def pytorch_two_input_one_neuron(input_data, expected, lr):
         yield f"Loss: {neuron_loss.item()} Neuron activation: {neuron}"
 
 for epoch in range(1, 10, 1):
-    for py_result, custom_result in zip(pytorch_micro_nets(input_data, expected), micro_nets(input_data, expected)):
+    for py_result, custom_result in zip(pytorch_micro_nets(input_data, expected, learning_rate), micro_nets(input_data, expected, learning_rate)):
         print(f"Epoch: {epoch}")
         print(py_result)
         print(custom_result)
