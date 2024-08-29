@@ -46,7 +46,7 @@ def micro_nets(input_x, expected_y, learning_rate=0.001):
         hidden_bias_gradient_1 = 0
         hidden_bias_gradient_2 = 0
 
-        # Get the gradient of each parameter in output nodes
+        # Assign local gradient to output nodes to hidden nodes parameters
         weight_5_gradient += hidden_nodes[0][0] * output_nodes_gradients[0]
         weight_6_gradient += hidden_nodes[0][0] * output_nodes_gradients[1]
         weight_7_gradient += hidden_nodes[0][1] * output_nodes_gradients[0]
@@ -54,10 +54,13 @@ def micro_nets(input_x, expected_y, learning_rate=0.001):
         output_bias_gradient_1 += output_nodes_gradients[0]
         output_bias_gradient_2 += output_nodes_gradients[1]
 
+        # Assign local gradient to hidden nodes
         hidden_nodes_gradients = [
             (output_nodes_gradients[0] * hidden_to_output_weight_5) + (output_nodes_gradients[1] * hidden_to_output_weight_6),
             (output_nodes_gradients[0] * hidden_to_output_weight_7) + (output_nodes_gradients[1] * hidden_to_output_weight_8)
         ]
+
+        # Assign local gradient to hidden nodes to input feature parameters
         weight_1_gradient += input_x[0][0] * hidden_nodes_gradients[0]
         weight_2_gradient += input_x[0][0] * hidden_nodes_gradients[1]
         weight_3_gradient += input_x[0][1] * hidden_nodes_gradients[0]
@@ -65,7 +68,7 @@ def micro_nets(input_x, expected_y, learning_rate=0.001):
         hidden_bias_gradient_1 += hidden_nodes_gradients[0]
         hidden_bias_gradient_2 += hidden_nodes_gradients[1]
 
-        # Update model parameters
+        # Update output nodes to hidden nodes parameters
         new_weight_5 = hidden_to_output_weight_5 - learning_rate * weight_5_gradient
         new_weight_6 = hidden_to_output_weight_6 - learning_rate * weight_6_gradient
         new_weight_7 = hidden_to_output_weight_7 - learning_rate * weight_7_gradient
@@ -79,6 +82,7 @@ def micro_nets(input_x, expected_y, learning_rate=0.001):
         hidden_to_output_weight_8 = new_weight_8
         output_bias = torch.tensor([[new_output_bias_1, new_output_bias_2]], dtype=torch.float32, device="cuda")
 
+        # Update hidden nodes to input feature parameters 
         new_weight_1 = input_to_hidden_weight_1 - learning_rate * weight_1_gradient
         new_weight_2 = input_to_hidden_weight_2 - learning_rate * weight_2_gradient
         new_weight_3 = input_to_hidden_weight_3 - learning_rate * weight_3_gradient
