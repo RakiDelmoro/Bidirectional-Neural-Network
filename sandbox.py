@@ -2,9 +2,13 @@ import torch
 from torch.nn.functional import linear
 
 def micro_nets(input_x, expected_y, learning_rate=0.001):
+    '''
+        Input shape = torch.Size(1, 2)
+        Target shape = torch.Size(1, 2)
+    '''
+
 
     # Parameters of input to hidden nodes
-    # input_to_hidden_weights = torch.tensor([[0.345, 1.839], [1.152, 0.946]], dtype=torch.float32, device="cuda")
     input_to_hidden_weight_1 = torch.tensor([0.345], dtype=torch.float32, device="cuda")
     input_to_hidden_weight_2 = torch.tensor([1.839], dtype=torch.float32, device="cuda")
     input_to_hidden_weight_3 = torch.tensor([1.152], dtype=torch.float32, device="cuda")
