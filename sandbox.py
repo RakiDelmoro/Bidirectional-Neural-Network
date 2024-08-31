@@ -7,7 +7,6 @@ def micro_nets(input_x, expected_y, learning_rate=0.001):
         Target shape = torch.Size(1, 2)
     '''
 
-
     # Parameters of input to hidden nodes
     input_to_hidden_weight_1 = torch.tensor([0.345], dtype=torch.float32, device="cuda")
     input_to_hidden_weight_2 = torch.tensor([1.839], dtype=torch.float32, device="cuda")
@@ -125,64 +124,175 @@ def pytorch_micro_nets(input_x, expected_y, lr=0.001):
 
         yield f"Loss: {loss.item()} Neuron activation: {output_nodes}"
 
-input_data = torch.tensor([[0, 0]], dtype=torch.float32, device="cuda")
-expected = torch.tensor([[0, 1]], dtype=torch.float32, device="cuda")
-learning_rate = 0.001
-
 def two_input_one_neuron(input_data, expected, lr):
     # W1 and W2
-    weights = torch.tensor([[0.9], [0.2]], dtype=torch.float32, device="cuda")
-    bias = torch.tensor([[1.0]], dtype=torch.float32, device="cuda")
+    weights = torch.tensor([[0.5, 0.1]], dtype=torch.float32, device="cuda")
+    bias = torch.tensor([[1]], dtype=torch.float32, device="cuda")
 
-    while True:
-        weighted_sum = torch.sum(torch.tensor([input_i * w_i for input_feature in input_data for input_i, w_i in zip(input_feature, weights)]))
-        neuron = weighted_sum + bias
-        neuron_loss = (neuron - expected)**2
+    for epoch in range(1, 10):
+        print(f"Epoch: {epoch}")
+        for each_data in range(input_data.shape[0]):
+            batch_of_input = input_data[each_data].unsqueeze(0)
+            expected_y = expected[each_data].unsqueeze(0)
+            neuron = torch.sum(batch_of_input * weights) + bias
+            neuron_loss = (neuron - expected_y)**2
 
-        # Equivalent to optimizer.zero_grad() -> start with zero gradient
-        weight_1_grad = 0
-        weight_2_grad = 0
-        bias_grad = 0
-        neuron_grad = 0
+            # Equivalent to optimizer.zero_grad() -> start with zero gradient
+            weight_1_grad = 0
+            weight_2_grad = 0
+            bias_grad = 0
+            neuron_grad = 0
 
-        # Equivalent to loss.backward -> calculate local gradient for each parameter
-        neuron_grad += 2 * (neuron - expected)
-        weight_1_grad += input_data[0][0] * neuron_grad
-        weight_2_grad += input_data[0][1] * neuron_grad
-        bias_grad += neuron_grad
+            # Equivalent to loss.backward -> calculate local gradient for each parameter
+            neuron_grad += 2 * (neuron - expected_y)
+            weight_1_grad += input_data[each_data][0] * neuron_grad
+            weight_2_grad += input_data[each_data][1] * neuron_grad
+            bias_grad += neuron_grad
 
-        # Equivalent to optimizer.step() -> update the parameters 
-        new_weight1 = weights[0] - lr * weight_1_grad
-        new_weight2 = weights[1] - lr * weight_2_grad
-        new_bias = bias - lr * bias_grad
+            # Equivalent to optimizer.step() -> update the parameters 
+            new_weight1 = weights[0][0] - lr * weight_1_grad
+            new_weight2 = weights[0][1] - lr * weight_2_grad
+            new_bias = bias - lr * bias_grad
 
-        weights[0] = new_weight1
-        weights[1] = new_weight2
-        bias = new_bias
+            weights[0][0] = new_weight1
+            weights[0][1] = new_weight2
+            bias = new_bias
 
-        yield f"Loss: {neuron_loss.item()} Neuron activation: {neuron}"
+            print(f"batch of {each_data+1} Loss: {neuron_loss.item()} Neuron activation: {neuron}")
 
 def pytorch_two_input_one_neuron(input_data, expected, lr):
-    weights = torch.tensor([[0.9], [0.2]], dtype=torch.float32, device="cuda", requires_grad=True)
-    bias = torch.tensor([[1.0]], dtype=torch.float32, device="cuda", requires_grad=True)
+    weights = torch.tensor([[0.5]], dtype=torch.float32, device="cuda", requires_grad=True)
+    bias = torch.tensor([[0]], dtype=torch.float32, device="cuda", requires_grad=True)
 
     parameters = [weights, bias]
 
     loss_func = torch.nn.MSELoss()
     optimizer = torch.optim.SGD(parameters, lr=lr)
 
-    while True:
-        neuron = linear(input_data, weights.t(), bias)
-        neuron_loss = loss_func(neuron, expected)
-        optimizer.zero_grad()
-        neuron_loss.backward()
-        optimizer.step()
-
-        yield f"Loss: {neuron_loss.item()} Neuron activation: {neuron}"
-
-for epoch in range(1, 10, 1):
-    for py_result, custom_result in zip(pytorch_micro_nets(input_data, expected, learning_rate), micro_nets(input_data, expected, learning_rate)):
+    for epoch in range(1, 10):
         print(f"Epoch: {epoch}")
-        print(py_result)
-        print(custom_result)
-        epoch += 1
+        for each in range(input_data.shape[0]):
+            expected_y = expected[each].unsqueeze(0)
+            neuron = linear(input_data[each].unsqueeze(0), weights.t(), bias)
+            neuron_loss = loss_func(neuron, expected_y)
+            optimizer.zero_grad()
+            neuron_loss.backward()
+            optimizer.step()
+            print(f"batch of {each+1} Loss: {neuron_loss.item()} Neuron activation: {neuron}")
+
+def custom_one_to_two(input_data, expected, learning_rate):
+    input_to_hidden_nodes_weights = torch.tensor([0.24, 0.53], dtype=torch.float32, device="cuda")
+    input_to_hidden_bias = torch.tensor([2.01, 1.23], dtype=torch.float32, device="cuda")
+    hidden_to_output_weights = torch.tensor([[0.1534, 0.1412], [0.881, 0.9541]], dtype=torch.float32, device="cuda")
+    hidden_to_output_bias = torch.tensor([0.175, 0.231], dtype=torch.float32, device="cuda")
+
+    for epoch in range(1, 10):
+        print(f"Epoch: {epoch}")
+        for each_data in range(input_data.shape[0]):
+            batch_of_input = input_data[each_data].unsqueeze(0)
+            expected_y = expected[each_data].unsqueeze(0)
+            input_to_hidden_neuron = (batch_of_input * input_to_hidden_nodes_weights) + input_to_hidden_bias
+            hidden_to_output_neuron = torch.matmul(input_to_hidden_neuron, hidden_to_output_weights) + hidden_to_output_bias
+
+            neuron_loss = torch.mean((hidden_to_output_neuron - expected_y)**2)
+
+            # zero gradients
+            input_to_hidden_weight_1_grad = 0
+            input_to_hidden_weight_2_grad = 0
+            input_to_hidden_bias_1_grad = 0
+            input_to_hidden_bias_2_grad = 0
+
+            hidden_to_output_weight_1_grad = 0
+            hidden_to_output_weight_2_grad = 0
+            hidden_to_output_weight_3_grad = 0
+            hidden_to_output_weight_4_grad = 0
+            hidden_to_output_bias_grad_1 = 0
+            hidden_to_output_bias_grad_2 = 0
+            neuron_grad = 0
+
+            # backpropagation
+            neuron_grad += 2 * (hidden_to_output_neuron - expected_y)
+            hidden_to_output_weight_1_grad += hidden_to_output_neuron[0][0] * neuron_grad[0][0]
+            hidden_to_output_weight_2_grad += hidden_to_output_neuron[0][1] * neuron_grad[0][0]
+            hidden_to_output_weight_3_grad += hidden_to_output_neuron[0][0] * neuron_grad[0][1]
+            hidden_to_output_weight_4_grad += hidden_to_output_neuron[0][1] * neuron_grad[0][1]
+            hidden_to_output_bias_grad_1 += neuron_grad[0][0]
+            hidden_to_output_bias_grad_2 += neuron_grad[0][1]
+
+            # TODO: Fix the calculation of hidden nodes gradient
+            hidden_nodes_gradients = [
+                (neuron_grad[0][0] * hidden_to_output_weights[0][0]) + (neuron_grad[0][1] * hidden_to_output_weights[1][0]),
+                (neuron_grad[0][0] * hidden_to_output_weights[0][1]) + (neuron_grad[0][1] * hidden_to_output_weights[1][1])
+            ]
+
+            input_to_hidden_weight_1_grad += input_data[each_data][0] * hidden_nodes_gradients[0]
+            input_to_hidden_weight_2_grad += input_data[each_data][0] * hidden_nodes_gradients[1]
+            input_to_hidden_bias_1_grad += hidden_nodes_gradients[0]
+            input_to_hidden_bias_2_grad += hidden_nodes_gradients[1] 
+
+            # Update parameters
+            new_hidden_to_output_weight_1 = hidden_to_output_weights[0][0] - learning_rate * hidden_to_output_weight_1_grad
+            new_hidden_to_output_weight_2 = hidden_to_output_weights[1][0] - learning_rate * hidden_to_output_weight_2_grad
+            new_hidden_to_output_weight_3 = hidden_to_output_weights[0][1] - learning_rate * hidden_to_output_weight_3_grad
+            new_hidden_to_output_weight_4 = hidden_to_output_weights[1][1] - learning_rate * hidden_to_output_weight_4_grad
+            new_hidden_to_output_bias_1 = hidden_to_output_bias[0] - learning_rate * hidden_to_output_bias_grad_1
+            new_hidden_to_output_bias_2 = hidden_to_output_bias[1] - learning_rate * hidden_to_output_bias_grad_2
+
+            new_input_to_hidden_weight_1 = input_to_hidden_nodes_weights[0] - learning_rate * input_to_hidden_weight_1_grad
+            new_input_to_hidden_weight_2 = input_to_hidden_nodes_weights[1] - learning_rate * input_to_hidden_weight_2_grad
+            new_input_to_hidden_bias_1 = input_to_hidden_bias[0] - learning_rate * input_to_hidden_bias_1_grad
+            new_input_to_hidden_bias_2 = input_to_hidden_bias[1] - learning_rate * input_to_hidden_bias_2_grad
+
+            hidden_to_output_weights[0][0] = new_hidden_to_output_weight_1
+            hidden_to_output_weights[1][0] = new_hidden_to_output_weight_2
+            hidden_to_output_weights[0][1] = new_hidden_to_output_weight_3
+            hidden_to_output_weights[1][1] = new_hidden_to_output_weight_4
+            hidden_to_output_bias[0] = new_hidden_to_output_bias_1
+            hidden_to_output_bias[1] = new_hidden_to_output_bias_2
+
+            input_to_hidden_nodes_weights[0] = new_input_to_hidden_weight_1
+            input_to_hidden_nodes_weights[1] = new_input_to_hidden_weight_2
+            input_to_hidden_bias[0] = new_input_to_hidden_bias_1
+            input_to_hidden_bias[1] = new_input_to_hidden_bias_2
+
+            print(f"batch of {each_data+1} Loss: {neuron_loss.item()} Neuron activation: {hidden_to_output_neuron}")
+
+
+test_input_data = torch.tensor([[1], [2], [3]], dtype=torch.float32, device="cuda")
+test_expected = torch.tensor([[4, 5],[6, 7],[8, 9]], dtype=torch.float32, device="cuda")
+learning_rate = 0.001
+
+def pytorch_one_to_two(input_data, expected, learning_rate):
+    input_to_hidden_nodes_weights = torch.tensor([[0.24, 0.53]], dtype=torch.float32, device="cuda", requires_grad=True)
+    input_to_hidden_bias = torch.tensor([2.01, 1.23], dtype=torch.float32, device="cuda", requires_grad=True)
+    hidden_to_output_weights = torch.tensor([[0.1534, 0.1412], [0.881, 0.9541]], dtype=torch.float32, device="cuda", requires_grad=True)
+    hidden_to_output_bias = torch.tensor([0.175, 0.231], dtype=torch.float32, device="cuda", requires_grad=True)
+
+    parameters = [input_to_hidden_nodes_weights, input_to_hidden_bias, hidden_to_output_weights, hidden_to_output_bias]
+    loss_func = torch.nn.MSELoss()
+    optimizer = torch.optim.SGD(parameters, lr=learning_rate)
+
+    for epoch in range(1, 10):
+        print(f"Epoch: {epoch}")
+        for each in range(input_data.shape[0]):
+            expected_y = expected[each].unsqueeze(0)
+            input_to_hidden_neuron = linear(input_data[each].unsqueeze(0), input_to_hidden_nodes_weights.t(), input_to_hidden_bias)
+            hidden_to_output_neuron = linear(input_to_hidden_neuron, hidden_to_output_weights.t(), hidden_to_output_bias)
+            hidden_to_output_neuron.retain_grad()
+            neuron_loss = loss_func(hidden_to_output_neuron, expected_y)
+            optimizer.zero_grad()
+            neuron_loss.backward()
+            optimizer.step()
+            print(f"batch of {each+1} Loss: {neuron_loss.item()} Neuron activation: {hidden_to_output_neuron}")
+
+# custom_one_to_two(test_input_data, test_expected, learning_rate)
+pytorch_one_to_two(test_input_data, test_expected, learning_rate)
+
+
+# for epoch in range(1, 10, 1):
+    # # for py_result, custom_result in zip(pytorch_two_input_one_neuron(input_data, expected, learning_rate), two_input_one_neuron(input_data, expected, learning_rate)):
+    #   for py_result in pytorch_two_input_one_neuron(input_data, expected, learning_rate):
+    #     print(f"Epoch: {epoch}")
+    #     print(py_result)
+    #     # print(custom_result)
+    #     epoch += 1
