@@ -285,9 +285,8 @@ def pytorch_one_to_two(input_data, expected, learning_rate):
             optimizer.step()
             print(f"batch of {each+1} Loss: {neuron_loss.item()} Neuron activation: {hidden_to_output_neuron}")
 
-# custom_one_to_two(test_input_data, test_expected, learning_rate)
+custom_one_to_two(test_input_data, test_expected, learning_rate)
 pytorch_one_to_two(test_input_data, test_expected, learning_rate)
-
 
 # for epoch in range(1, 10, 1):
     # # for py_result, custom_result in zip(pytorch_two_input_one_neuron(input_data, expected, learning_rate), two_input_one_neuron(input_data, expected, learning_rate)):
