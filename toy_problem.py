@@ -12,6 +12,7 @@ def generate_input_and_expected_pair(number_will_generated):
         right_to_left_int_1 = (left_to_right_pair[0] * list_of_target_weights[0]) + (left_to_right_pair[1] * list_of_target_weights[1])
         right_to_left_int_2 = (left_to_right_pair[0] * list_of_target_weights[2]) + (left_to_right_pair[1] * list_of_target_weights[3])
         right_to_left_pair = right_to_left_int_1, right_to_left_int_2
+        
         generated_pair_of_number.append((torch.tensor(left_to_right_pair, dtype=torch.float32, device='cuda'), torch.tensor(right_to_left_pair, dtype=torch.float32, device='cuda')))
 
     return generated_pair_of_number
