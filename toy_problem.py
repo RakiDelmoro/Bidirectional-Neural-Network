@@ -23,27 +23,27 @@ def neural_network(input_data, learning_rate=0.01):
     weight_4 = torch.tensor([0.1371], dtype=torch.float32, device="cuda")
 
     while True:
-        input_for_forward_pass = input_data[0][0]
-        input_for_backward_pass = input_data[0][1]
+        left_to_right_input = input_data[0][0]
+        right_to_left_input = input_data[0][1]
 
-        print(f"target for forward pass output: {input_for_backward_pass}")
-        print(f"target for backward pass output: {input_for_forward_pass}")
+        print(f"target for forward pass output: {right_to_left_input}")
+        print(f"target for backward pass output: {left_to_right_input}")
         # Forward pass
-        output_node_1 = (input_for_forward_pass[0] * weight_1) + (input_for_forward_pass[1] * weight_2)
-        output_node_2 = (input_for_forward_pass[0] * weight_3) + (input_for_forward_pass[1] * weight_4)
+        left_to_right_output_1 = (left_to_right_input[0] * weight_1) + (left_to_right_input[1] * weight_2)
+        left_to_right_output_2 = (left_to_right_input[0] * weight_3) + (left_to_right_input[1] * weight_4)
         # # backward pass
-        input_node_1 = (input_for_backward_pass[0] * weight_1) + (input_for_backward_pass[1] * weight_3)
-        input_node_2 = (input_for_backward_pass[0] * weight_2) + (input_for_backward_pass[1] * weight_4)
+        right_to_left_output_1 = (right_to_left_input[0] * weight_1) + (right_to_left_input[1] * weight_3)
+        right_to_left_output_2 = (right_to_left_input[0] * weight_2) + (right_to_left_input[1] * weight_4)
 
-        weight_1_forward_gradient = input_for_forward_pass[0] * output_node_1
-        weight_2_forward_gradient = input_for_forward_pass[1] * output_node_1
-        weight_3_forward_gradient = input_for_forward_pass[0] * output_node_2
-        weight_4_forward_gradient = input_for_forward_pass[1] * output_node_2
+        weight_1_forward_gradient = left_to_right_input[0] * left_to_right_output_1
+        weight_2_forward_gradient = left_to_right_input[0] * left_to_right_output_1
+        weight_3_forward_gradient = left_to_right_input[1] * left_to_right_output_2
+        weight_4_forward_gradient = left_to_right_input[1] * left_to_right_output_2
 
-        weight_1_backward_gradient = input_for_backward_pass[0] * input_node_1
-        weight_2_backward_gradient = input_for_backward_pass[1] * input_node_2
-        weight_3_backward_gradient = input_for_backward_pass[0] * input_node_1
-        weight_4_backward_gradient = input_for_backward_pass[1] * input_node_2
+        weight_1_backward_gradient = right_to_left_input[0] * right_to_left_output_1
+        weight_2_backward_gradient = right_to_left_input[1] * right_to_left_output_2
+        weight_3_backward_gradient = right_to_left_input[0] * right_to_left_output_1
+        weight_4_backward_gradient = right_to_left_input[1] * right_to_left_output_2
 
         weight_1_avg_gradient = torch.mean(torch.tensor([weight_1_forward_gradient, weight_1_backward_gradient]))
         weight_2_avg_gradient = torch.mean(torch.tensor([weight_2_forward_gradient, weight_2_backward_gradient]))
@@ -55,7 +55,9 @@ def neural_network(input_data, learning_rate=0.01):
         weight_3 = weight_3 - learning_rate * weight_3_avg_gradient
         weight_4 = weight_4 - learning_rate * weight_4_avg_gradient
 
-        print(weight_1, weight_2, weight_3, weight_4)
+        print(f"Left to right output node: {left_to_right_output_1, left_to_right_output_2}")
+        print(f"Right to left output node: {right_to_left_output_1, right_to_left_output_2}")
+        print(f"Weight 1: {weight_1}, {weight_2}, {weight_3}, {weight_4}")
 
 neural_network(generate_input_and_expected_pair(1))
 
