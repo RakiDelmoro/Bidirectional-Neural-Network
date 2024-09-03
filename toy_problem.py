@@ -4,7 +4,6 @@ import sys
 
 def generate_input_and_expected_pair(number_will_generated):
     list_of_target_weights = [3, 5, 7, 9]
-
     generated_pair_of_number = []
     for _ in range(number_will_generated):
         left_to_right_pair = random.randint(0, sys.maxsize), random.randint(0, sys.maxsize)
