@@ -4,7 +4,7 @@ import torch
 def generate_input_and_expected_pair(number_will_generated):
     # [[w1, w2], [w3, w4]]
     target_weights = torch.tensor([[-9/8, 5/8], [7/8, -3/8]], dtype=torch.float32, device="cuda")
-    # target_weights = torch.tensor([[9, 5], [7, 3]], dtype=torch.float32, device="cuda")
+    # target_weights = torch.tensor([[3, 5], [7, 9]], dtype=torch.float32, device="cuda")
 
     generated_pair_of_number = []
     for _ in range(number_will_generated):
