@@ -3,8 +3,8 @@ import torch
 
 def generate_input_and_expected_pair(number_will_generated):
     # [[w1, w2], [w3, w4]]
-    target_weights = torch.tensor([[-9/8, 5/8], [7/8, -3/8]], dtype=torch.float32, device="cuda")
-    # target_weights = torch.tensor([[3, 5], [7, 9]], dtype=torch.float32, device="cuda")
+    # target_weights = torch.tensor([[-9/8, 5/8], [7/8, -3/8]], dtype=torch.float32, device="cuda")
+    target_weights = torch.tensor([[3, 5], [7, 9]], dtype=torch.float32, device="cuda")
 
     generated_pair_of_number = []
     for _ in range(number_will_generated):
@@ -17,9 +17,11 @@ def generate_input_and_expected_pair(number_will_generated):
 def neural_network(learning_rate=0.001):
     # [[w1, w2], [w3, w4]]
     l2r_weights = torch.tensor([[0.1233, 0.5365], [0.1457, 0.1371]], dtype=torch.float32, device="cuda")
-    r2l_weights = torch.tensor([[0.2334, 0.5345], [0.6456, 0.6588]], dtype=torch.float32, device="cuda")
+    # r2l_weights = torch.tensor([[0.2334, 0.5345], [0.6456, 0.6588]], dtype=torch.float32, device="cuda")
+    r2l_weights = l2r_weights.inverse()
 
     while True:
+        # Training AI MODEL
         data = generate_input_and_expected_pair(1)
         l2r_input_data = data[0][0]
         r2l_input_data = data[0][1]
