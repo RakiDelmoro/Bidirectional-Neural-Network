@@ -17,8 +17,10 @@ def generate_input_and_expected_pair(number_will_generated):
 def neural_network(learning_rate=0.001):
     # [[w1, w2], [w3, w4]]
     l2r_weights = torch.tensor([[0.1233, 0.5365], [0.1457, 0.1371]], dtype=torch.float32, device="cuda")
-    # r2l_weights = torch.tensor([[0.2334, 0.5345], [0.6456, 0.6588]], dtype=torch.float32, device="cuda")
-    r2l_weights = l2r_weights.inverse()
+    r2l_weights = torch.tensor([[0.2334, 0.5345], [0.6456, 0.6588]], dtype=torch.float32, device="cuda")
+    # r2l_weights = l2r_weights
+
+    counter = 0
 
     while True:
         # Training AI MODEL
@@ -31,11 +33,16 @@ def neural_network(learning_rate=0.001):
         # forward pass
         l2r_output_nodes = torch.matmul(l2r_input_data, l2r_weights)
         # backward pass
-        r2l_output_nodes = torch.matmul(r2l_input_data, r2l_weights)
+        r2l_output_nodes = torch.matmul(l2r_output_nodes, r2l_weights)
         # Left to right nodes loss
         l2r_output_nodes_loss = 2 * (l2r_output_nodes - r2l_input_data)
         # Right to left nodes loss
         r2l_output_nodes_loss = 2 * (r2l_output_nodes - l2r_input_data)
+
+        # If encountered nan value immediately stop training for debugging purposes
+        if torch.isnan(r2l_output_nodes).any().item():
+            print(f'Nan value encountered! for {counter} runs')
+            break
 
         # Left to right calculate local gradient
         l2r_weight_1_gradient = l2r_input_data[0, 0] * l2r_output_nodes_loss[0, 0]
@@ -74,6 +81,7 @@ def neural_network(learning_rate=0.001):
         print(f"Right to left output node: {r2l_output_nodes}")
         print(f"Left to right weights: [[{l2r_weight_1}, {l2r_weight_2}], [{l2r_weight_3}, {l2r_weight_4}]]")
         print(f"Right to left weights: [[{r2l_weight_1}, {r2l_weight_2}], [{r2l_weight_3}, {r2l_weight_4}]]")
+        counter += 1
 
 neural_network()
 
