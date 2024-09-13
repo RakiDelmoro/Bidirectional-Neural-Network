@@ -62,10 +62,10 @@ def neural_network_two_to_two(data):
     l2r_weights_gradients[1, 0] = torch.sum(l2r_input_data[:, 1] * l2r_output_nodes_loss[:, 0])
     l2r_weights_gradients[1, 1] = torch.sum(l2r_input_data[:, 1] * l2r_output_nodes_loss[:, 1])
     # Right to left calculate local gradient
-    r2l_weights_gradients[0, 0] = r2l_input_data[0, 0] * r2l_output_nodes_loss[0, 0]
-    r2l_weights_gradients[0, 1] = r2l_input_data[0, 0] * r2l_output_nodes_loss[0, 1]
-    r2l_weights_gradients[1, 0] = r2l_input_data[0, 1] * r2l_output_nodes_loss[0, 0]
-    r2l_weights_gradients[1, 1] = r2l_input_data[0, 1] * r2l_output_nodes_loss[0, 1]
+    r2l_weights_gradients[0, 0] = torch.sum(r2l_input_data[0, 0] * r2l_output_nodes_loss[0, 0])
+    r2l_weights_gradients[0, 1] = torch.sum(r2l_input_data[0, 0] * r2l_output_nodes_loss[0, 1])
+    r2l_weights_gradients[1, 0] = torch.sum(r2l_input_data[0, 1] * r2l_output_nodes_loss[0, 0])
+    r2l_weights_gradients[1, 1] = torch.sum(r2l_input_data[0, 1] * r2l_output_nodes_loss[0, 1])
 
     # Normalize local gradients by batch size
     batch_size = l2r_input_data.shape[0]
